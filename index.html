@@ -1,0 +1,1120 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ORIGIN 起源 - DeFi 3.0 Protocol</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔺</text></svg>">
+<script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+:root{
+--gold:#D4A843;--gold-dim:rgba(212,168,67,0.15);--green:#00C9A7;--green-dim:rgba(0,201,167,0.12);
+--red:#FF4D6A;--red-dim:rgba(255,77,106,0.12);--blue:#4A9EFF;--blue-dim:rgba(74,158,255,0.12);
+--purple:#A78BFA;--purple-dim:rgba(167,139,250,0.12);
+--bg:#090B10;--bg2:#0F1218;--bg3:#161A23;--bg4:#1D222D;--border:#252A36;--border2:#2F3545;
+--t1:#F0F2F5;--t2:#A0A8B8;--t3:#6B7280;--t4:#454D5E;
+--sidebar-w:240px;--topbar-h:56px;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--t1);overflow-x:hidden;}
+::-webkit-scrollbar{width:6px;}
+::-webkit-scrollbar-track{background:var(--bg2);}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px;}
+
+/* Layout */
+.sidebar{position:fixed;left:0;top:0;bottom:0;width:var(--sidebar-w);background:var(--bg2);border-right:1px solid var(--border);z-index:50;display:flex;flex-direction:column;transition:transform .3s;}
+.sidebar-logo{padding:20px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border);}
+.sidebar-logo .icon{width:36px;height:36px;background:linear-gradient(135deg,var(--gold),#B8860B);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;color:#000;}
+.sidebar-logo .name{font-size:16px;font-weight:700;color:var(--gold);}
+.sidebar-logo .tag{font-size:10px;color:var(--t3);font-weight:500;}
+.sidebar-nav{flex:1;padding:12px 8px;overflow-y:auto;}
+.nav-section{padding:8px 12px 4px;font-size:10px;font-weight:700;color:var(--t4);text-transform:uppercase;letter-spacing:1px;margin-top:8px;}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:500;color:var(--t2);transition:all .15s;margin-bottom:2px;}
+.nav-item:hover{background:rgba(255,255,255,0.04);color:var(--t1);}
+.nav-item.active{background:var(--gold-dim);color:var(--gold);}
+.nav-item .ni{width:20px;text-align:center;font-size:14px;}
+.sidebar-footer{padding:12px 16px;border-top:1px solid var(--border);font-size:11px;color:var(--t4);text-align:center;}
+
+.topbar{position:fixed;top:0;left:var(--sidebar-w);right:0;height:var(--topbar-h);background:rgba(9,11,16,0.85);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);z-index:40;display:flex;align-items:center;justify-content:space-between;padding:0 24px;}
+.topbar-left{display:flex;align-items:center;gap:16px;}
+.topbar-price{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;}
+.topbar-price .label{color:var(--t3);}
+.topbar-price .val{color:var(--gold);}
+.topbar-right{display:flex;align-items:center;gap:10px;}
+
+.content{margin-left:var(--sidebar-w);margin-top:var(--topbar-h);padding:24px;min-height:calc(100vh - var(--topbar-h));}
+
+/* Buttons */
+.btn{padding:10px 20px;border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .2s;display:inline-flex;align-items:center;gap:6px;}
+.btn:hover:not(:disabled){transform:translateY(-1px);}
+.btn:disabled{opacity:.4;cursor:not-allowed;transform:none;}
+.btn-gold{background:linear-gradient(135deg,var(--gold),#B8860B);color:#000;box-shadow:0 4px 15px rgba(212,168,67,.25);}
+.btn-green{background:linear-gradient(135deg,var(--green),#00A08A);color:#fff;box-shadow:0 4px 15px rgba(0,201,167,.2);}
+.btn-blue{background:linear-gradient(135deg,var(--blue),#2563EB);color:#fff;}
+.btn-red{background:var(--red-dim);color:var(--red);border:1px solid rgba(255,77,106,.2);}
+.btn-outline{background:transparent;color:var(--t2);border:1px solid var(--border);}
+.btn-outline:hover{border-color:var(--gold);color:var(--gold);}
+.btn-full{width:100%;justify-content:center;padding:14px;font-size:15px;font-weight:700;}
+.btn-sm{padding:6px 12px;font-size:12px;border-radius:6px;}
+
+/* Cards */
+.card{background:var(--bg3);border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:16px;}
+.card-title{font-size:14px;font-weight:700;color:var(--t1);margin-bottom:14px;display:flex;align-items:center;gap:8px;}
+.card-title .ct-icon{font-size:16px;}
+
+/* Stats Grid */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:20px;}
+.stat{background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:16px 18px;}
+.stat .s-label{font-size:11px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;}
+.stat .s-val{font-size:22px;font-weight:800;color:var(--t1);}
+.stat .s-sub{font-size:11px;color:var(--t3);margin-top:4px;}
+.stat .s-val.gold{color:var(--gold);}
+.stat .s-val.green{color:var(--green);}
+
+/* Form Elements */
+.form-group{margin-bottom:14px;}
+.form-label{font-size:12px;font-weight:600;color:var(--t3);margin-bottom:6px;display:block;}
+.form-select{width:100%;padding:10px 14px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--t1);font-size:13px;font-family:inherit;appearance:none;cursor:pointer;}
+.form-select:focus{border-color:var(--gold);outline:none;}
+.form-select option{background:var(--bg);}
+
+.token-input{background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:14px;transition:border-color .2s;}
+.token-input:focus-within{border-color:var(--gold);}
+.ti-top{display:flex;justify-content:space-between;margin-bottom:8px;}
+.ti-token{font-size:13px;font-weight:700;color:var(--t1);display:flex;align-items:center;gap:6px;}
+.ti-token .dot{width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;color:#000;}
+.ti-bal{font-size:11px;color:var(--t3);}
+.ti-bal span{color:var(--t2);font-weight:500;cursor:pointer;}
+.ti-bal span:hover{color:var(--gold);}
+.ti-bottom{display:flex;align-items:center;gap:8px;}
+.ti-bottom input{flex:1;border:none;background:none;color:var(--t1);font-size:24px;font-weight:700;outline:none;font-family:inherit;min-width:0;}
+.ti-bottom input::placeholder{color:var(--t4);}
+.ti-pct{padding:4px 8px;border-radius:4px;border:1px solid var(--border);background:transparent;color:var(--t3);font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;}
+.ti-pct:hover{border-color:var(--gold);color:var(--gold);}
+
+.arrow-divider{display:flex;justify-content:center;margin:-6px 0;position:relative;z-index:2;}
+.arrow-box{width:32px;height:32px;border-radius:8px;background:var(--bg3);border:3px solid var(--bg);display:flex;align-items:center;justify-content:center;color:var(--t3);font-size:14px;}
+
+/* Toast */
+.toast{padding:10px 14px;border-radius:8px;font-size:12px;margin-top:10px;display:none;line-height:1.5;}
+.toast.show{display:block;}
+.toast.info{background:var(--blue-dim);border:1px solid rgba(74,158,255,.2);color:#93C5FD;}
+.toast.success{background:var(--green-dim);border:1px solid rgba(0,201,167,.2);color:#6EE7B7;}
+.toast.error{background:var(--red-dim);border:1px solid rgba(255,77,106,.2);color:#FCA5A5;}
+.toast.warning{background:rgba(245,166,35,.1);border:1px solid rgba(245,166,35,.2);color:#FCD34D;}
+.toast a{color:inherit;text-decoration:underline;}
+
+/* Wallet */
+.wallet-pill{display:flex;align-items:center;gap:8px;padding:6px 6px 6px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;}
+.wallet-pill .dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green);}
+.wallet-pill .addr{font-size:12px;font-weight:500;font-family:'SF Mono','Fira Code',monospace;color:var(--t1);}
+.wallet-pill .disc{width:28px;height:28px;border-radius:6px;border:none;background:var(--red-dim);color:var(--red);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;}
+
+/* Modal */
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);z-index:200;align-items:center;justify-content:center;}
+.modal-bg.show{display:flex;}
+.modal{background:var(--bg3);border:1px solid var(--border);border-radius:16px;padding:24px;width:400px;max-width:90vw;position:relative;animation:mIn .2s;}
+@keyframes mIn{from{opacity:0;transform:scale(.95) translateY(8px);}}
+.modal h3{font-size:16px;font-weight:700;margin-bottom:4px;}
+.modal p{font-size:12px;color:var(--t3);margin-bottom:16px;}
+.modal-close{position:absolute;top:14px;right:14px;background:none;border:none;color:var(--t3);font-size:18px;cursor:pointer;}
+.wallet-opt{display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid var(--border);border-radius:10px;cursor:pointer;transition:all .15s;margin-bottom:8px;background:transparent;width:100%;font-family:inherit;color:var(--t1);}
+.wallet-opt:hover{border-color:var(--gold);background:rgba(212,168,67,.03);}
+.wallet-opt .wo-icon{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:20px;}
+.wallet-opt .wo-name{font-size:14px;font-weight:600;}
+.wallet-opt .wo-desc{font-size:11px;color:var(--t3);}
+
+/* Page Sections */
+.page{display:none;}
+.page.active{display:block;}
+.page-title{font-size:22px;font-weight:800;margin-bottom:6px;}
+.page-desc{font-size:13px;color:var(--t3);margin-bottom:20px;}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;}
+
+/* Table */
+.tbl{width:100%;border-collapse:collapse;font-size:12px;}
+.tbl th{text-align:left;padding:8px 10px;color:var(--t3);font-weight:600;border-bottom:1px solid var(--border);font-size:11px;text-transform:uppercase;}
+.tbl td{padding:8px 10px;border-bottom:1px solid rgba(255,255,255,.03);color:var(--t2);}
+.tbl tr:hover td{background:rgba(255,255,255,.02);}
+
+/* Monitor */
+.monitor-addr{padding:10px 14px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--t1);font-size:13px;font-family:'SF Mono',monospace;width:100%;outline:none;}
+.monitor-addr:focus{border-color:var(--gold);}
+
+/* Countdown */
+.countdown{display:flex;gap:8px;align-items:center;}
+.cd-unit{text-align:center;background:var(--bg);border-radius:8px;padding:8px 12px;min-width:48px;}
+.cd-unit .num{font-size:20px;font-weight:800;color:var(--gold);}
+.cd-unit .lbl{font-size:9px;color:var(--t3);text-transform:uppercase;}
+
+/* Badge */
+.badge{display:inline-block;padding:3px 8px;border-radius:4px;font-size:10px;font-weight:700;}
+.badge-green{background:var(--green-dim);color:var(--green);}
+.badge-gold{background:var(--gold-dim);color:var(--gold);}
+.badge-blue{background:var(--blue-dim);color:var(--blue);}
+.badge-purple{background:var(--purple-dim);color:var(--purple);}
+
+.spinner{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.2);border-top-color:currentColor;border-radius:50%;animation:spin .7s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+.hidden{display:none!important;}
+a{color:var(--blue);text-decoration:none;}
+a:hover{text-decoration:underline;}
+
+.rebase-bar{background:var(--bg4);border:1px solid var(--border);border-radius:10px;padding:14px 18px;display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px;}
+.rb-left{display:flex;align-items:center;gap:12px;}
+.rb-label{font-size:12px;color:var(--t3);}
+.rb-val{font-size:14px;font-weight:700;color:var(--green);}
+
+/* Mobile hamburger */
+.hamburger{display:none;background:none;border:none;color:var(--t1);font-size:22px;cursor:pointer;padding:4px 8px;}
+.sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:45;}
+.sidebar-overlay.show{display:block;}
+
+@media(max-width:768px){
+.hamburger{display:block;}
+.sidebar{transform:translateX(-100%);z-index:50;}
+.sidebar.open{transform:translateX(0);}
+.topbar,.content{margin-left:0;}
+.topbar{padding:0 12px;}
+.content{padding:14px;}
+.grid-2,.grid-3{grid-template-columns:1fr;}
+.stats{grid-template-columns:1fr 1fr;}
+.stat .s-val{font-size:16px;}
+.page-title{font-size:18px;}
+.ti-bottom input{font-size:18px;}
+.rebase-bar{flex-direction:column;align-items:flex-start;}
+}
+</style>
+</head>
+<body>
+
+<!-- Sidebar -->
+<aside class="sidebar" id="sidebar">
+<div class="sidebar-logo">
+<div class="icon">O</div>
+<div><div class="name">ORIGIN</div><div class="tag">DeFi 3.0 Protocol</div></div>
+</div>
+<nav class="sidebar-nav">
+<div class="nav-section">概览</div>
+<div class="nav-item active" onclick="go('dashboard')"><span class="ni">📊</span>仪表盘</div>
+<div class="nav-section">DeFi</div>
+<div class="nav-item" onclick="go('stake')"><span class="ni">🔒</span>质押</div>
+<div class="nav-item" onclick="go('unstake')"><span class="ni">🔓</span>赎回</div>
+<div class="nav-item" onclick="go('bond')"><span class="ni">📜</span>债券</div>
+<div class="nav-item" onclick="go('calculator')"><span class="ni">🧮</span>计算器</div>
+<div class="nav-section">生态</div>
+<div class="nav-item" onclick="go('dex')"><span class="ni">🔄</span>DEX 交易</div>
+<div class="nav-item" onclick="go('fomo')"><span class="ni">🎰</span>FOMO POT</div>
+<div class="nav-item" onclick="go('bridge')"><span class="ni">🌉</span>跨链桥</div>
+<div class="nav-section">工具</div>
+<div class="nav-item" onclick="go('monitor')"><span class="ni">👁️</span>钱包监控</div>
+<div class="nav-item" onclick="go('contracts')"><span class="ni">📋</span>合约地址</div>
+</nav>
+<div class="sidebar-footer">开心荷包蛋制作<br>Polygon Network</div>
+</aside>
+
+<!-- Topbar -->
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+<header class="topbar">
+<div class="topbar-left">
+<button class="hamburger" onclick="toggleSidebar()">☰</button>
+<div class="topbar-price"><span class="label">LGNS</span><span class="val" id="topPrice">$--</span></div>
+<div class="topbar-price"><span class="label">LP底池</span><span class="val" id="topLP">$--</span></div>
+</div>
+<div class="topbar-right" id="topWallet">
+<button class="btn btn-gold btn-sm" onclick="openModal()">连接钱包</button>
+</div>
+</header>
+
+<!-- Wallet Modal -->
+<div class="modal-bg" id="walletModal">
+<div class="modal">
+<button class="modal-close" onclick="closeModal()">&times;</button>
+<h3>连接钱包</h3>
+<p>选择钱包连接到 Polygon 网络</p>
+<button class="wallet-opt" onclick="connectWallet('metamask')">
+<div class="wo-icon" style="background:linear-gradient(135deg,#f6851b,#e2761b);">🦊</div>
+<div><div class="wo-name">MetaMask</div><div class="wo-desc">小狐狸钱包</div></div>
+</button>
+<button class="wallet-opt" onclick="connectWallet('okx')">
+<div class="wo-icon" style="background:#000;border:1px solid #333;color:#fff;font-weight:800;font-size:12px;">OKX</div>
+<div><div class="wo-name">OKX Wallet</div><div class="wo-desc">欧易 Web3 钱包</div></div>
+</button>
+</div>
+</div>
+
+<!-- Content -->
+<main class="content">
+
+<!-- ===== DASHBOARD ===== -->
+<div class="page active" id="p-dashboard">
+<div class="page-title">仪表盘</div>
+<div class="page-desc">ORIGIN 起源协议实时数据概览</div>
+
+<div class="rebase-bar">
+<div class="rb-left">
+<div><div class="rb-label">距离下一次 Rebase</div><div class="countdown" id="rebaseCountdown"><div class="cd-unit"><div class="num" id="cdH">--</div><div class="lbl">时</div></div><div class="cd-unit"><div class="num" id="cdM">--</div><div class="lbl">分</div></div><div class="cd-unit"><div class="num" id="cdS">--</div><div class="lbl">秒</div></div></div></div>
+</div>
+<div style="text-align:right"><div class="rb-label">每次Rebase奖励率</div><div class="rb-val">~0.2234%</div></div>
+</div>
+
+<div class="stats">
+<div class="stat"><div class="s-label">LGNS 价格</div><div class="s-val gold" id="dPrice">$--</div><div class="s-sub">实时链上价格</div></div>
+<div class="stat"><div class="s-label">LP 底池总值</div><div class="s-val gold" id="dLP">加载中...</div><div class="s-sub" id="dLPDetail">正在从链上读取数据...</div></div>
+<div class="stat"><div class="s-label">我的 LGNS</div><div class="s-val" id="dMyLGNS">--</div><div class="s-sub">钱包余额</div></div>
+<div class="stat"><div class="s-label">我的 sLGNS</div><div class="s-val green" id="dMySLGNS">--</div><div class="s-sub">质押中</div></div>
+<div class="stat"><div class="s-label">我的 DAI</div><div class="s-val" id="dMyDAI">--</div><div class="s-sub">稳定币余额</div></div>
+<div class="stat"><div class="s-label">MATIC (Gas)</div><div class="s-val" id="dMyMATIC">--</div><div class="s-sub">Gas 费用</div></div>
+</div>
+
+<div class="card" style="margin-bottom:16px;">
+<div class="card-title"><span class="ct-icon">💧</span>LP 底池详情 (LGNS/DAI 交易对)</div>
+<div class="stats" style="grid-template-columns:repeat(4,1fr);margin-bottom:0;">
+<div class="stat" style="border-color:rgba(212,168,67,0.2);"><div class="s-label">LGNS 数量</div><div class="s-val gold" id="dPoolLGNS">加载中...</div></div>
+<div class="stat" style="border-color:rgba(0,201,167,0.2);"><div class="s-label" id="dPoolQuoteLabel">DAI/USDT 数量</div><div class="s-val green" id="dPoolQuote">加载中...</div></div>
+<div class="stat"><div class="s-label">LGNS 单价</div><div class="s-val gold" id="dPoolPrice">加载中...</div></div>
+<div class="stat"><div class="s-label">底池总值 (USD)</div><div class="s-val" id="dPoolTotal">加载中...</div></div>
+</div>
+</div>
+
+<div class="grid-2">
+<div class="card">
+<div class="card-title"><span class="ct-icon">📈</span>协议信息</div>
+<table class="tbl">
+<tr><td style="color:var(--t3)">交易对</td><td>LGNS / DAI</td></tr>
+<tr><td style="color:var(--t3)">每日 Rebase 次数</td><td>3 次 (每8小时)</td></tr>
+<tr><td style="color:var(--t3)">日收益率</td><td>~0.6% - 0.8%</td></tr>
+<tr><td style="color:var(--t3)">卖出手续费</td><td>5% (自动回购+FOMO+DAO)</td></tr>
+<tr><td style="color:var(--t3)">网络</td><td>Polygon (Chain ID: 137)</td></tr>
+<tr><td style="color:var(--t3)">DEX</td><td>QuickSwap V2</td></tr>
+</table>
+</div>
+<div class="card">
+<div class="card-title"><span class="ct-icon">🏦</span>国库地址</div>
+<table class="tbl">
+<tr><td style="color:var(--t3)">国库合约</td><td style="font-size:11px;font-family:monospace;word-break:break-all;">0x7B9B...5321</td></tr>
+<tr><td style="color:var(--t3)">DAO 池</td><td style="font-size:11px;font-family:monospace;">0x0309...ee6</td></tr>
+<tr><td style="color:var(--t3)">质押合约</td><td style="font-size:11px;font-family:monospace;">0x1964...1Bfc</td></tr>
+<tr><td style="color:var(--t3)">底层架构</td><td>OlympusDAO Fork</td></tr>
+<tr><td style="color:var(--t3)">审计</td><td><span class="badge badge-green">Armors Labs 通过</span></td></tr>
+<tr><td style="color:var(--t3)">漏洞</td><td>0 Critical / 0 High / 0 Medium</td></tr>
+</table>
+</div>
+</div>
+</div>
+
+<!-- ===== STAKE ===== -->
+<div class="page" id="p-stake">
+<div class="page-title">质押 Stake</div>
+<div class="page-desc">质押 LGNS 获得 sLGNS，享受每8小时自动复利 Rebase 收益</div>
+
+<div class="grid-2">
+<div class="card">
+<div class="card-title"><span class="ct-icon">🔒</span>活期质押 (Flexible)</div>
+<div class="form-group"><div class="form-label">质押类型</div>
+<select class="form-select" id="stakeType" onchange="onStakeTypeChange()">
+<option value="main">活期质押 (随时赎回)</option>
+<option value="long60">LONG 60天锁仓</option>
+<option value="long120">LONG 120天锁仓</option>
+<option value="long240">LONG 240天锁仓</option>
+<option value="long360">LONG 360天锁仓</option>
+<option value="a120">A 120天质押</option>
+<option value="a240">A 240天质押</option>
+<option value="a360">A 360天质押</option>
+<option value="quota360">配额 360天质押</option>
+<option value="a360token">A 360天代币质押</option>
+</select></div>
+
+<div class="token-input">
+<div class="ti-top"><div class="ti-token"><div class="dot" style="background:var(--gold);">L</div>LGNS</div><div class="ti-bal">可用: <span id="stakeBal" onclick="setStakeMax()">0.0000</span></div></div>
+<div class="ti-bottom"><input type="text" id="stakeAmt" placeholder="0.0" oninput="document.getElementById('stakeRecv').value=this.value"><button class="ti-pct" onclick="setStakePct(0.5)">50%</button><button class="ti-pct" onclick="setStakePct(1)">MAX</button></div>
+</div>
+<div class="arrow-divider"><div class="arrow-box">↓</div></div>
+<div class="token-input" style="margin-top:-6px;">
+<div class="ti-top"><div class="ti-token"><div class="dot" style="background:var(--green);">s</div>sLGNS</div><div class="ti-bal">已质押: <span id="stakeStaked">0.0000</span></div></div>
+<div class="ti-bottom"><input type="text" id="stakeRecv" placeholder="0.0" disabled style="color:var(--green);"></div>
+</div>
+<div style="margin-top:14px;">
+<button class="btn btn-blue btn-full" onclick="doApprove('stake')" style="margin-bottom:8px;">授权 LGNS</button>
+<button class="btn btn-green btn-full" onclick="doStake()">质押</button>
+</div>
+<div class="toast" id="stakeToast"></div>
+</div>
+
+<div class="card">
+<div class="card-title"><span class="ct-icon">📊</span>质押收益预览</div>
+<table class="tbl" id="stakePreview">
+<thead><tr><th>周期</th><th>预计数量</th><th>收益</th></tr></thead>
+<tbody>
+<tr><td>30天</td><td id="sp30">--</td><td id="sp30p">--</td></tr>
+<tr><td>60天</td><td id="sp60">--</td><td id="sp60p">--</td></tr>
+<tr><td>90天</td><td id="sp90">--</td><td id="sp90p">--</td></tr>
+<tr><td>180天</td><td id="sp180">--</td><td id="sp180p">--</td></tr>
+<tr><td>365天</td><td id="sp365">--</td><td id="sp365p">--</td></tr>
+</tbody>
+</table>
+<p style="font-size:11px;color:var(--t4);margin-top:10px;">* 基于每8小时 0.2234% 复利计算，实际收益取决于协议参数</p>
+</div>
+</div>
+</div>
+
+<!-- ===== UNSTAKE ===== -->
+<div class="page" id="p-unstake">
+<div class="page-title">赎回 Unstake</div>
+<div class="page-desc">解除质押，将 sLGNS 兑换回 LGNS</div>
+
+<div style="max-width:500px;">
+<div class="card">
+<div class="card-title"><span class="ct-icon">🔓</span>解除质押</div>
+<div class="form-group"><div class="form-label">合约选择</div>
+<select class="form-select" id="unstakeType" onchange="onUnstakeTypeChange()">
+<option value="main">主质押 (sLGNS 活期)</option>
+<option value="long60">LONG 60天</option><option value="long120">LONG 120天</option>
+<option value="long240">LONG 240天</option><option value="long360">LONG 360天</option>
+<option value="a120">A 120天</option><option value="a240">A 240天</option><option value="a360">A 360天</option>
+<option value="quota360">配额 360天</option><option value="a360token">A 360天代币</option>
+</select></div>
+
+<div id="mainUnstakeForm">
+<div class="token-input">
+<div class="ti-top"><div class="ti-token"><div class="dot" style="background:var(--green);">s</div>sLGNS</div><div class="ti-bal">可用: <span id="unstakeBal" onclick="setUnstakeMax()">0.0000</span></div></div>
+<div class="ti-bottom"><input type="text" id="unstakeAmt" placeholder="0.0"><button class="ti-pct" onclick="setUnstakePct(0.5)">50%</button><button class="ti-pct" onclick="setUnstakePct(1)">MAX</button></div>
+</div>
+<div style="margin-top:14px;">
+<button class="btn btn-blue btn-full" onclick="doApprove('unstake')" style="margin-bottom:8px;">授权 sLGNS</button>
+<button class="btn btn-gold btn-full" onclick="doUnstake()">赎回 sLGNS → LGNS</button>
+</div>
+</div>
+<div id="longUnstakeForm" class="hidden">
+<button class="btn btn-gold btn-full" onclick="doLongUnstake()">解除锁仓质押</button>
+<p style="font-size:11px;color:var(--t3);margin-top:8px;">锁仓期满后方可解除</p>
+</div>
+<div class="toast" id="unstakeToast"></div>
+</div>
+</div>
+</div>
+
+<!-- ===== BOND ===== -->
+<div class="page" id="p-bond">
+<div class="page-title">债券 Bond</div>
+<div class="page-desc">以折扣价购买 LGNS，锁定期后线性释放本金 + 爆块奖励</div>
+
+<div class="stats" style="grid-template-columns:repeat(3,1fr);">
+<div class="stat"><div class="s-label">市场价格</div><div class="s-val gold" id="bondMktPrice">$--</div></div>
+<div class="stat"><div class="s-label">债券折扣 (约)</div><div class="s-val green">~15%</div></div>
+<div class="stat"><div class="s-label">8小时奖励率</div><div class="s-val">0.2234%</div></div>
+</div>
+
+<div class="grid-2">
+<div class="card">
+<div class="card-title"><span class="ct-icon">📜</span>储备债券 (DAI/USDT)</div>
+<table class="tbl">
+<thead><tr><th>类型</th><th>期限</th><th>状态</th></tr></thead>
+<tbody>
+<tr><td>DAI 债券</td><td>5天</td><td><span class="badge badge-green">可用</span></td></tr>
+<tr><td>USDT 稳定债券</td><td>5天</td><td><span class="badge badge-green">可用</span></td></tr>
+<tr><td>DAI 稳定债券 30天</td><td>30天</td><td><span class="badge badge-green">可用</span></td></tr>
+<tr><td>DAI 稳定债券 60天</td><td>60天</td><td><span class="badge badge-green">可用</span></td></tr>
+<tr><td>DAI 稳定债券 120天</td><td>120天</td><td><span class="badge badge-green">可用</span></td></tr>
+<tr><td>DAI 稳定债券 240天</td><td>240天</td><td><span class="badge badge-green">可用</span></td></tr>
+<tr><td>DAI 稳定债券 360天</td><td>360天</td><td><span class="badge badge-gold">长期</span></td></tr>
+<tr><td>BTC 债券</td><td>5天</td><td><span class="badge badge-blue">资产</span></td></tr>
+<tr><td>ETH 债券</td><td>5天</td><td><span class="badge badge-blue">资产</span></td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="card">
+<div class="card-title"><span class="ct-icon">💧</span>LP 流动性债券</div>
+<table class="tbl">
+<thead><tr><th>类型</th><th>期限</th><th>状态</th></tr></thead>
+<tbody>
+<tr><td>LP 债券 30天</td><td>30天</td><td><span class="badge badge-green">可用</span></td></tr>
+<tr><td>LP 债券 60天</td><td>60天</td><td><span class="badge badge-green">可用</span></td></tr>
+<tr><td>LP 债券 120天</td><td>120天</td><td><span class="badge badge-green">可用</span></td></tr>
+<tr><td>LP 债券 240天</td><td>240天</td><td><span class="badge badge-green">可用</span></td></tr>
+<tr><td>LP 债券 360天</td><td>360天</td><td><span class="badge badge-gold">长期</span></td></tr>
+</tbody>
+</table>
+</div>
+</div>
+
+<div class="card">
+<div class="card-title"><span class="ct-icon">🛒</span>购买 360 天 DAI 稳定债券</div>
+<div class="grid-2">
+<div>
+<div class="token-input">
+<div class="ti-top"><div class="ti-token"><div class="dot" style="background:#2775CA;">D</div>DAI</div><div class="ti-bal">可用: <span id="bondDAIBal">0.00</span></div></div>
+<div class="ti-bottom"><input type="text" id="bondAmt" placeholder="0.0" oninput="calcBondRecv()"><button class="ti-pct" onclick="setBondMax()">MAX</button></div>
+</div>
+<div class="arrow-divider"><div class="arrow-box">↓</div></div>
+<div class="token-input" style="margin-top:-6px;">
+<div class="ti-top"><div class="ti-token"><div class="dot" style="background:var(--gold);">L</div>LGNS (预估)</div></div>
+<div class="ti-bottom"><input type="text" id="bondRecv" placeholder="0.0" disabled style="color:var(--gold);"></div>
+</div>
+<div style="margin-top:14px;">
+<button class="btn btn-blue btn-full" onclick="doApprove('bond')" style="margin-bottom:8px;">授权 DAI</button>
+<button class="btn btn-gold btn-full" onclick="doBond()">购买 360天债券</button>
+</div>
+<div class="toast" id="bondToast"></div>
+</div>
+<div>
+<div class="card-title" style="margin-top:0;">360天债券收益对比</div>
+<table class="tbl">
+<thead><tr><th>方式</th><th>投入 10,000U</th></tr></thead>
+<tbody>
+<tr><td>活期质押 1年</td><td style="color:var(--t1);">~7,776 LGNS</td></tr>
+<tr><td style="color:var(--gold);">360天债券</td><td style="color:var(--gold);font-weight:700;">~8,945 LGNS</td></tr>
+<tr><td>债券多赚</td><td style="color:var(--green);">+1,169 LGNS (+15%)</td></tr>
+</tbody>
+</table>
+<p style="font-size:11px;color:var(--t4);margin-top:10px;">* 债券优势：折扣买入 + 锁仓期间持续获得爆块奖励<br>* 本金按天线性释放，每日可领取<br>* 爆块奖励每8小时结算一次，扣除5%手续费</p>
+</div>
+</div>
+</div>
+</div>
+
+<!-- ===== CALCULATOR ===== -->
+<div class="page" id="p-calculator">
+<div class="page-title">收益计算器</div>
+<div class="page-desc">估算质押和债券的复利收益</div>
+
+<div class="grid-2">
+<div class="card">
+<div class="card-title"><span class="ct-icon">🧮</span>质押复利计算</div>
+<div class="form-group"><div class="form-label">初始 LGNS 数量</div><input class="monitor-addr" id="calcInit" type="number" value="1000" oninput="calcYield()"></div>
+<div class="form-group"><div class="form-label">LGNS 单价 (USDT)</div><input class="monitor-addr" id="calcPrice" type="number" value="10" oninput="calcYield()"></div>
+<div class="form-group"><div class="form-label">8小时 Rebase 利率 (%)</div><input class="monitor-addr" id="calcRate" type="number" value="0.2234" step="0.01" oninput="calcYield()"></div>
+<div class="form-group"><div class="form-label">天数</div><input class="monitor-addr" id="calcDays" type="number" value="365" oninput="calcYield()"></div>
+</div>
+<div class="card">
+<div class="card-title"><span class="ct-icon">📊</span>计算结果</div>
+<table class="tbl" id="calcResult">
+<thead><tr><th>周期</th><th>LGNS</th><th>价值 (USDT)</th><th>收益率</th></tr></thead>
+<tbody id="calcBody"></tbody>
+</table>
+</div>
+</div>
+
+<div class="card">
+<div class="card-title"><span class="ct-icon">📜</span>360天债券计算</div>
+<div class="grid-3">
+<div class="form-group"><div class="form-label">投入 (USDT)</div><input class="monitor-addr" id="bondCalcInvest" type="number" value="10000" oninput="calcBond()"></div>
+<div class="form-group"><div class="form-label">市场价</div><input class="monitor-addr" id="bondCalcMkt" type="number" value="14.32" step="0.01" oninput="calcBond()"></div>
+<div class="form-group"><div class="form-label">债券价</div><input class="monitor-addr" id="bondCalcBond" type="number" value="12.45" step="0.01" oninput="calcBond()"></div>
+</div>
+<div class="grid-2">
+<div>
+<div class="form-label">市场直接购买</div>
+<div style="font-size:20px;font-weight:700;color:var(--t2);" id="bondCalcMktCoins">-- LGNS</div>
+</div>
+<div>
+<div class="form-label">债券购买 (折扣)</div>
+<div style="font-size:20px;font-weight:700;color:var(--gold);" id="bondCalcBondCoins">-- LGNS</div>
+</div>
+</div>
+<div style="margin-top:10px;font-size:13px;color:var(--green);font-weight:600;" id="bondCalcAdv"></div>
+</div>
+</div>
+
+<!-- ===== DEX ===== -->
+<div class="page" id="p-dex">
+<div class="page-title">DEX 交易</div>
+<div class="page-desc">通过 QuickSwap 进行 LGNS/DAI 兑换 (Polygon 链)</div>
+
+<div style="max-width:480px;">
+<div class="card">
+<div class="card-title"><span class="ct-icon">🔄</span>Swap</div>
+<div class="form-group"><div class="form-label">交易方向</div>
+<select class="form-select" id="swapDir" onchange="onSwapDirChange()">
+<option value="buy">买入: DAI → LGNS</option>
+<option value="sell">卖出: LGNS → DAI (5%手续费)</option>
+</select></div>
+
+<div class="token-input">
+<div class="ti-top"><div class="ti-token" id="swapFromToken"><div class="dot" style="background:#2775CA;">D</div>DAI</div><div class="ti-bal">可用: <span id="swapFromBal">0.00</span></div></div>
+<div class="ti-bottom"><input type="text" id="swapFromAmt" placeholder="0.0" oninput="calcSwap()"><button class="ti-pct" onclick="setSwapMax()">MAX</button></div>
+</div>
+<div class="arrow-divider"><div class="arrow-box">↓</div></div>
+<div class="token-input" style="margin-top:-6px;">
+<div class="ti-top"><div class="ti-token" id="swapToToken"><div class="dot" style="background:var(--gold);">L</div>LGNS</div><div class="ti-bal">预计获得</div></div>
+<div class="ti-bottom"><input type="text" id="swapToAmt" placeholder="0.0" disabled style="color:var(--gold);"></div>
+</div>
+
+<div style="margin-top:10px;padding:10px;background:var(--bg);border-radius:8px;font-size:11px;color:var(--t3);">
+<div style="display:flex;justify-content:space-between;"><span>当前价格</span><span id="swapPriceInfo">-- DAI/LGNS</span></div>
+<div style="display:flex;justify-content:space-between;margin-top:4px;"><span>卖出手续费</span><span id="swapFeeInfo">买入无手续费</span></div>
+<div style="display:flex;justify-content:space-between;margin-top:4px;"><span>滑点保护</span><span>自动</span></div>
+</div>
+
+<div style="margin-top:14px;">
+<button class="btn btn-blue btn-full" onclick="doSwapApprove()" style="margin-bottom:8px;" id="swapApproveBtn">授权 DAI</button>
+<button class="btn btn-gold btn-full" onclick="doSwap()">交易</button>
+</div>
+<div class="toast" id="swapToast"></div>
+</div>
+</div>
+</div>
+
+<!-- ===== FOMO POT ===== -->
+<div class="page" id="p-fomo">
+<div class="page-title">FOMO POT 抽奖</div>
+<div class="page-desc">5% 质押奖励 + 2% 手续费自动注入奖池，公平随机抽奖</div>
+
+<div class="stats" style="grid-template-columns:repeat(3,1fr);">
+<div class="stat"><div class="s-label">时时奖池</div><div class="s-val gold">≥ 20,000 DAI</div><div class="s-sub">累计满额自动开奖</div></div>
+<div class="stat"><div class="s-label">周榜奖池</div><div class="s-val">≥ 50,000 DAI</div><div class="s-sub">每周日开奖 (30人)</div></div>
+<div class="stat"><div class="s-label">月榜奖池</div><div class="s-val green">每月开奖</div><div class="s-sub">51名幸运获奖者</div></div>
+</div>
+
+<div class="grid-2">
+<div class="card">
+<div class="card-title"><span class="ct-icon">⏱️</span>时时奖 (Real-time)</div>
+<table class="tbl">
+<tr><td style="color:var(--t3)">触发条件</td><td>奖池累计 ≥ 20,000 DAI</td></tr>
+<tr><td style="color:var(--t3)">参与条件</td><td>2小时内买入 ≥ 101 USDT</td></tr>
+<tr><td style="color:var(--t3)">中奖人数</td><td>10 人 (随机交易哈希)</td></tr>
+<tr><td style="color:var(--t3)">奖金分配</td><td>80% 按交易额加权分配</td></tr>
+<tr><td style="color:var(--t3)">滚入周榜</td><td>10%</td></tr>
+<tr><td style="color:var(--t3)">滚入月榜</td><td>10%</td></tr>
+</table>
+</div>
+<div class="card">
+<div class="card-title"><span class="ct-icon">🏆</span>月榜大奖 (Monthly)</div>
+<table class="tbl">
+<tr><td style="color:var(--t3)">参与条件</td><td>当月买入 ≥ 100 DAI</td></tr>
+<tr><td style="color:var(--t3)">中奖人数</td><td>51 人</td></tr>
+<tr><td style="color:var(--t3)">最大单笔买入者</td><td style="color:var(--gold);font-weight:600;">独享 40%</td></tr>
+<tr><td style="color:var(--t3)">剩余 50 人</td><td>按交易额加权分 60%</td></tr>
+<tr><td style="color:var(--t3)">合约地址</td><td style="font-size:11px;font-family:monospace;">0x2805...1c51</td></tr>
+</table>
+</div>
+</div>
+</div>
+
+<!-- ===== BRIDGE ===== -->
+<div class="page" id="p-bridge">
+<div class="page-title">跨链桥</div>
+<div class="page-desc">LGNS 跨链资产转移 (Polygon ↔ Anubis Chain)</div>
+
+<div style="max-width:500px;">
+<div class="card">
+<div class="card-title"><span class="ct-icon">🌉</span>跨链转账</div>
+<div class="form-group"><div class="form-label">来源链</div>
+<select class="form-select"><option>Polygon (MATIC)</option><option>Anubis Privacy Chain</option></select></div>
+<div class="form-group"><div class="form-label">目标链</div>
+<select class="form-select"><option>Anubis Privacy Chain</option><option>Polygon (MATIC)</option></select></div>
+<div class="form-group"><div class="form-label">资产</div>
+<select class="form-select"><option>LGNS</option><option>A (稳定币)</option><option>DAI</option></select></div>
+<div class="token-input">
+<div class="ti-top"><div class="ti-token"><div class="dot" style="background:var(--gold);">L</div>LGNS</div><div class="ti-bal">可用: <span>0.0000</span></div></div>
+<div class="ti-bottom"><input type="text" placeholder="0.0"><button class="ti-pct">MAX</button></div>
+</div>
+<div style="margin-top:14px;">
+<button class="btn btn-gold btn-full" disabled>跨链桥开发中...</button>
+</div>
+<p style="font-size:11px;color:var(--t3);margin-top:10px;">Anubis 隐私链基于 ZK-Rollup 技术，支持 ERC20/721/1155，总量 21,000,000 枚。跨链桥将在 3.0 阶段正式上线。</p>
+</div>
+</div>
+</div>
+
+<!-- ===== MONITOR ===== -->
+<div class="page" id="p-monitor">
+<div class="page-title">钱包监控</div>
+<div class="page-desc">输入任意 Polygon 地址，查看其 LGNS/sLGNS/DAI 持仓</div>
+
+<div class="card">
+<div class="card-title"><span class="ct-icon">👁️</span>观察钱包</div>
+<div style="display:flex;gap:10px;margin-bottom:16px;">
+<input class="monitor-addr" id="monitorAddr" placeholder="输入 Polygon 钱包地址 (0x...)" style="flex:1;">
+<button class="btn btn-gold" onclick="monitorWallet()">查询</button>
+</div>
+
+<div id="monitorResult" class="hidden">
+<div class="stats" style="grid-template-columns:repeat(2,1fr);">
+<div class="stat"><div class="s-label">LGNS 余额</div><div class="s-val gold" id="monLGNS">--</div></div>
+<div class="stat"><div class="s-label">sLGNS 质押</div><div class="s-val green" id="monSLGNS">--</div></div>
+<div class="stat"><div class="s-label">DAI 余额</div><div class="s-val" id="monDAI">--</div></div>
+<div class="stat"><div class="s-label">MATIC</div><div class="s-val" id="monMATIC">--</div></div>
+</div>
+<div style="font-size:11px;color:var(--t3);">
+<a id="monLink" href="#" target="_blank">在 PolygonScan 上查看 →</a>
+</div>
+</div>
+<div class="toast" id="monitorToast"></div>
+</div>
+
+<div class="card">
+<div class="card-title"><span class="ct-icon">📌</span>快捷地址</div>
+<table class="tbl">
+<thead><tr><th>名称</th><th>地址</th><th></th></tr></thead>
+<tbody>
+<tr><td>国库</td><td style="font-family:monospace;font-size:11px;">0x7B9B7d4F870A38e92c9a181B00f9b33cc8Ef5321</td><td><button class="btn btn-outline btn-sm" onclick="quickMonitor('0x7B9B7d4F870A38e92c9a181B00f9b33cc8Ef5321')">查看</button></td></tr>
+<tr><td>DAO 池</td><td style="font-family:monospace;font-size:11px;">0x0309Ca717d6989676194b88fD06029a88CEEfee6</td><td><button class="btn btn-outline btn-sm" onclick="quickMonitor('0x0309Ca717d6989676194b88fD06029a88CEEfee6')">查看</button></td></tr>
+<tr><td>LP 交易对</td><td style="font-family:monospace;font-size:11px;">0x882df4B0fB50a229C3B4124EB18c759911485bFb</td><td><button class="btn btn-outline btn-sm" onclick="quickMonitor('0x882df4B0fB50a229C3B4124EB18c759911485bFb')">查看</button></td></tr>
+<tr><td>多签国库</td><td style="font-family:monospace;font-size:11px;">0xBc7269B1aE5d419a661cB4E4B54401159B2DC012</td><td><button class="btn btn-outline btn-sm" onclick="quickMonitor('0xBc7269B1aE5d419a661cB4E4B54401159B2DC012')">查看</button></td></tr>
+</tbody>
+</table>
+</div>
+</div>
+
+<!-- ===== CONTRACTS ===== -->
+<div class="page" id="p-contracts">
+<div class="page-title">合约地址</div>
+<div class="page-desc">ORIGIN 协议所有智能合约地址 (Polygon)</div>
+
+<div class="card">
+<table class="tbl">
+<thead><tr><th>分类</th><th>名称</th><th>地址</th></tr></thead>
+<tbody>
+<tr><td><span class="badge badge-gold">核心</span></td><td>LGNS</td><td style="font-family:monospace;font-size:11px;">0xeB51D9A39AD5EEF215dC0Bf39a8821ff804A0F01</td></tr>
+<tr><td><span class="badge badge-gold">核心</span></td><td>sLGNS</td><td style="font-family:monospace;font-size:11px;">0x99a57E6C8558BC6689f894e068733ADf83C19725</td></tr>
+<tr><td><span class="badge badge-gold">核心</span></td><td>质押合约</td><td style="font-family:monospace;font-size:11px;">0x1964Ca90474b11FFD08af387b110ba6C96251Bfc</td></tr>
+<tr><td><span class="badge badge-gold">核心</span></td><td>国库</td><td style="font-family:monospace;font-size:11px;">0x7B9B7d4F870A38e92c9a181B00f9b33cc8Ef5321</td></tr>
+<tr><td><span class="badge badge-green">交易</span></td><td>LGNS/DAI LP</td><td style="font-family:monospace;font-size:11px;">0x882df4B0fB50a229C3B4124EB18c759911485bFb</td></tr>
+<tr><td><span class="badge badge-green">交易</span></td><td>QuickSwap Router</td><td style="font-family:monospace;font-size:11px;">0xa5E0829CaCEd8fFDD4De3c43696c57F7D7A678ff</td></tr>
+<tr><td><span class="badge badge-blue">债券</span></td><td>DAI 360天</td><td style="font-family:monospace;font-size:11px;">0xa9c9eFB2AeEc103116B58B85cfeEFBB1b1FD1433</td></tr>
+<tr><td><span class="badge badge-blue">债券</span></td><td>LP 360天</td><td style="font-family:monospace;font-size:11px;">0x6c0Ac888b075c6b5141cbC1Da6170B6686aFd07D</td></tr>
+<tr><td><span class="badge badge-purple">高级</span></td><td>FOMO 抽奖</td><td style="font-family:monospace;font-size:11px;">0x280537D9641c3AA0f7ddEAa00602af1A60811c51</td></tr>
+<tr><td><span class="badge badge-purple">高级</span></td><td>涡轮 TURBINE</td><td style="font-family:monospace;font-size:11px;">0x07Ff4e06865de4934409Aa6eCea503b08Cc1C78d</td></tr>
+<tr><td><span class="badge badge-purple">高级</span></td><td>DAO 投票</td><td style="font-family:monospace;font-size:11px;">0xCBae1509597A71a304FA12d4aD9c7F5c6126eBCA</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+
+</main>
+
+<script>
+// ===== CONTRACTS =====
+const C={
+LGNS:'0xeB51D9A39AD5EEF215dC0Bf39a8821ff804A0F01',sLGNS:'0x99a57E6C8558BC6689f894e068733ADf83C19725',
+DAI:'0x8f3cf7ad23cd3cadbd9735aff958023239c6a063',USDT:'0xc2132D05D31c914a87C6611C10748AEb04B58e8F',
+staking:'0x1964Ca90474b11FFD08af387b110ba6C96251Bfc',helper:'0x78654ed080C1d1c87907646FDb2Ae48Db3635341',
+LP:'0x882df4B0fB50a229C3B4124EB18c759911485bFb',router:'0xa5E0829CaCEd8fFDD4De3c43696c57F7D7A678ff',
+bond360:'0xa9c9eFB2AeEc103116B58B85cfeEFBB1b1FD1433',
+long60:'0xdAd4d3fE850C8C57a2880F1C7D9141F2bCf3B65A',long120:'0xa22ca986cA163ab51f33fb534D559E4E03445c44',
+long240:'0xED24055c04609500AdB329c4eB82AAE49a478B8f',long360:'0x14fcA7bfa779A4172c9b2DE61fd352C005442520',
+a120:'0x33b69112FFF18eeA99834ACa7Db4021BebC1E084',a240:'0x65Ed60E414CEcE532d8afF90c89dA369E44CF883',
+a360:'0xDa13C7553A654601667adf9a1A16248bAB584F13',quota360:'0x25a4b842cB200E9148FF5a11BAbF80488c8d8b07',
+a360token:'0x23E2B07d85a8dbc307742C72aadbbdde4E5e2EFB',
+};
+const ERC20=['function balanceOf(address) view returns (uint256)','function approve(address,uint256) returns (bool)','function allowance(address,address) view returns (uint256)','function decimals() view returns (uint8)'];
+const PAIR_ABI=['function getReserves() view returns (uint112,uint112,uint32)','function token0() view returns (address)','function token1() view returns (address)'];
+const STAKING_ABI=['function stake(uint256,address) returns (bool)','function unstake(uint256,bool) returns (bool)','function claim(address)'];
+const HELPER_ABI=['function stake(uint256,address)','function stake(uint256)'];
+const LONG_ABI=['function stake(uint256)','function deposit(uint256)','function unstake()','function claim()','function withdraw()','function exit()'];
+const ROUTER_ABI=['function swapExactTokensForTokensSupportingFeeOnTransferTokens(uint256,uint256,address[],address,uint256)','function getAmountsOut(uint256,address[]) view returns (uint256[])'];
+const BOND_ABI=['function deposit(uint256,uint256,address) returns (uint256)','function payoutFor(uint256) view returns (uint256)','function bondPrice() view returns (uint256)'];
+
+let provider=null,signer=null,addr=null,dec=9,decDAI=18;
+let lgnsPrice=0,lgnsBalRaw=null,slgnsBalRaw=null,daiBalRaw=null;
+// Multiple RPC fallback for reliability
+const RPC_LIST=['https://rpc-mainnet.matic.quiknode.pro','https://polygon-bor-rpc.publicnode.com','https://polygon-rpc.com','https://rpc.ankr.com/polygon'];
+let rpcProvider=null;
+async function initRPC(){
+for(const url of RPC_LIST){
+try{
+const p=new ethers.providers.JsonRpcProvider(url);
+await p.getBlockNumber();
+rpcProvider=p;
+console.log('[RPC] Connected:',url);
+return;
+}catch(e){console.warn('[RPC] Failed:',url);}
+}
+rpcProvider=new ethers.providers.JsonRpcProvider(RPC_LIST[0]);
+}
+initRPC().then(()=>{fetchPrice();});
+
+// ===== NAV =====
+function toggleSidebar(){
+document.getElementById('sidebar').classList.toggle('open');
+document.getElementById('sidebarOverlay').classList.toggle('show');
+}
+function go(page){
+document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+document.getElementById('p-'+page).classList.add('active');
+document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+event.currentTarget.classList.add('active');
+// Close sidebar on mobile
+document.getElementById('sidebar').classList.remove('open');
+document.getElementById('sidebarOverlay').classList.remove('show');
+}
+
+// ===== WALLET =====
+function openModal(){document.getElementById('walletModal').classList.add('show');}
+function closeModal(){document.getElementById('walletModal').classList.remove('show');}
+
+async function connectWallet(type){
+closeModal();
+try{
+let eth;
+if(type==='metamask'){
+if(window.ethereum?.providers?.length) eth=window.ethereum.providers.find(p=>p.isMetaMask&&!p.isOKExWallet)||window.ethereum.providers.find(p=>p.isMetaMask);
+if(!eth&&window.ethereum?.isMetaMask) eth=window.ethereum;
+if(!eth) throw new Error('未检测到 MetaMask');
+}else{
+eth=window.okxwallet;
+if(!eth&&window.ethereum?.providers?.length) eth=window.ethereum.providers.find(p=>p.isOKExWallet||p.isOkxWallet);
+if(!eth&&window.ethereum?.isOKExWallet) eth=window.ethereum;
+if(!eth) throw new Error('未检测到 OKX 钱包');
+}
+const accs=await eth.request({method:'eth_requestAccounts'});
+addr=accs[0]; provider=new ethers.providers.Web3Provider(eth); signer=provider.getSigner();
+const net=await provider.getNetwork();
+if(net.chainId!==137){
+try{await eth.request({method:'wallet_switchEthereumChain',params:[{chainId:'0x89'}]});}
+catch(e){if(e.code===4902) await eth.request({method:'wallet_addEthereumChain',params:[{chainId:'0x89',chainName:'Polygon',nativeCurrency:{name:'POL',symbol:'POL',decimals:18},rpcUrls:['https://polygon-rpc.com'],blockExplorerUrls:['https://polygonscan.com']}]});else throw e;}
+provider=new ethers.providers.Web3Provider(eth); signer=provider.getSigner();
+}
+try{dec=await new ethers.Contract(C.LGNS,ERC20,provider).decimals();}catch(e){dec=9;}
+document.getElementById('topWallet').innerHTML=`<div class="wallet-pill"><div class="dot"></div><div class="addr">${addr.slice(0,6)}...${addr.slice(-4)}</div><button class="disc" onclick="disconnect()">✕</button></div>`;
+eth.on('accountsChanged',a=>{if(!a.length)disconnect();else{addr=a[0];refreshAll();}});
+eth.on('chainChanged',()=>location.reload());
+await refreshAll();
+}catch(e){alert('连接失败: '+e.message);}
+}
+function disconnect(){
+provider=null;signer=null;addr=null;
+document.getElementById('topWallet').innerHTML='<button class="btn btn-gold btn-sm" onclick="openModal()">连接钱包</button>';
+}
+
+// ===== DATA =====
+async function fetchPrice(){
+try{
+const lp=new ethers.Contract(C.LP,PAIR_ABI,rpcProvider);
+const [r0,r1]=await lp.getReserves();
+const t0=(await lp.token0()).toLowerCase();
+const t1=(await lp.token1()).toLowerCase();
+
+// Detect which is LGNS and which is the quote token (DAI or USDT)
+let lgnsR, quoteR, quoteDec, quoteSymbol;
+if(t0===C.LGNS.toLowerCase()){
+    lgnsR=r0; quoteR=r1;
+    // t1 is the quote token
+    try{ quoteDec=await new ethers.Contract(t1,ERC20,rpcProvider).decimals(); }catch(e){ quoteDec=18; }
+    quoteSymbol=(quoteDec<=6)?'USDT':'DAI';
+}else{
+    lgnsR=r1; quoteR=r0;
+    try{ quoteDec=await new ethers.Contract(t0,ERC20,rpcProvider).decimals(); }catch(e){ quoteDec=18; }
+    quoteSymbol=(quoteDec<=6)?'USDT':'DAI';
+}
+
+const lf=parseFloat(ethers.utils.formatUnits(lgnsR,dec));
+const qf=parseFloat(ethers.utils.formatUnits(quoteR,quoteDec));
+lgnsPrice=qf/lf;
+const totalLP=qf*2;
+
+// Format numbers with commas
+const fmtNum=(n,d=2)=>n.toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d});
+
+// Update all price displays
+document.getElementById('topPrice').textContent='$'+lgnsPrice.toFixed(4);
+document.getElementById('topLP').textContent='$'+fmtNum(totalLP,0);
+document.getElementById('dPrice').textContent='$'+lgnsPrice.toFixed(4);
+document.getElementById('dLP').textContent='$'+fmtNum(totalLP,0);
+document.getElementById('dLPDetail').textContent=fmtNum(lf,4)+' LGNS + '+fmtNum(qf,2)+' '+quoteSymbol;
+document.getElementById('bondMktPrice').textContent='$'+lgnsPrice.toFixed(4);
+document.getElementById('swapPriceInfo').textContent=lgnsPrice.toFixed(4)+' '+quoteSymbol+'/LGNS';
+
+// Update the quote token decimals for swap/bond
+decDAI=quoteDec;
+
+// Update LP detail card
+document.getElementById('dPoolLGNS').textContent=fmtNum(lf,4);
+document.getElementById('dPoolQuote').textContent=fmtNum(qf,2);
+document.getElementById('dPoolQuoteLabel').textContent=quoteSymbol+' 数量';
+document.getElementById('dPoolPrice').textContent='$'+lgnsPrice.toFixed(4);
+document.getElementById('dPoolTotal').textContent='$'+fmtNum(totalLP,0);
+
+console.log('[ORIGIN] LP底池: '+fmtNum(lf,4)+' LGNS + '+fmtNum(qf,2)+' '+quoteSymbol+' | 价格: $'+lgnsPrice.toFixed(4));
+}catch(e){
+console.error('Price fetch error:',e);
+document.getElementById('dPrice').textContent='加载失败';
+document.getElementById('dLP').textContent='加载失败';
+document.getElementById('dLPDetail').textContent='RPC 请求失败，30秒后自动重试';
+document.getElementById('dPoolLGNS').textContent='--';
+document.getElementById('dPoolQuote').textContent='--';
+document.getElementById('dPoolPrice').textContent='--';
+document.getElementById('dPoolTotal').textContent='--';
+}
+}
+
+async function refreshBalances(){
+if(!addr)return;
+const p=provider||rpcProvider;
+try{
+const lgns=new ethers.Contract(C.LGNS,ERC20,p);
+const slgns=new ethers.Contract(C.sLGNS,ERC20,p);
+const dai=new ethers.Contract(C.DAI,ERC20,p);
+const [lb,sb,db,mb]=await Promise.all([lgns.balanceOf(addr),slgns.balanceOf(addr),dai.balanceOf(addr),p.getBalance(addr)]);
+lgnsBalRaw=lb;slgnsBalRaw=sb;daiBalRaw=db;
+const lf=ethers.utils.formatUnits(lb,dec),sf=ethers.utils.formatUnits(sb,dec),df=ethers.utils.formatEther(db),mf=ethers.utils.formatEther(mb);
+document.getElementById('dMyLGNS').textContent=parseFloat(lf).toFixed(4);
+document.getElementById('dMySLGNS').textContent=parseFloat(sf).toFixed(4);
+document.getElementById('dMyDAI').textContent=parseFloat(df).toFixed(4);
+document.getElementById('dMyMATIC').textContent=parseFloat(mf).toFixed(4);
+document.getElementById('stakeBal').textContent=parseFloat(lf).toFixed(4);
+document.getElementById('stakeStaked').textContent=parseFloat(sf).toFixed(4);
+document.getElementById('unstakeBal').textContent=parseFloat(sf).toFixed(4);
+document.getElementById('bondDAIBal').textContent=parseFloat(df).toFixed(2);
+updateSwapBals();
+}catch(e){console.error(e);}
+}
+
+async function refreshAll(){await Promise.all([fetchPrice(),refreshBalances()]);calcYield();calcBond();}
+
+// ===== REBASE COUNTDOWN =====
+function updateRebase(){
+const now=new Date();const h=now.getUTCHours();
+const nextRebase=[0,8,16].map(r=>r<=h?r+24:r).sort((a,b)=>a-b)[0];
+const target=new Date(now);target.setUTCHours(nextRebase,0,0,0);
+if(target<=now)target.setUTCDate(target.getUTCDate()+1);
+const diff=target-now;
+const hh=Math.floor(diff/3600000),mm=Math.floor((diff%3600000)/60000),ss=Math.floor((diff%60000)/1000);
+document.getElementById('cdH').textContent=String(hh).padStart(2,'0');
+document.getElementById('cdM').textContent=String(mm).padStart(2,'0');
+document.getElementById('cdS').textContent=String(ss).padStart(2,'0');
+}
+setInterval(updateRebase,1000);updateRebase();
+
+// ===== CALCULATOR =====
+function calcYield(){
+const init=parseFloat(document.getElementById('calcInit').value)||0;
+const price=parseFloat(document.getElementById('calcPrice').value)||0;
+const rate=(parseFloat(document.getElementById('calcRate').value)||0)/100;
+const days=parseInt(document.getElementById('calcDays').value)||365;
+const periods=[30,60,90,180,days];
+const body=document.getElementById('calcBody');
+body.innerHTML='';
+periods.forEach(d=>{
+const final=init*Math.pow(1+rate,3*d);
+const val=final*price;
+const roi=((final/init-1)*100).toFixed(1);
+body.innerHTML+=`<tr><td>${d}天</td><td style="color:var(--gold);font-weight:600;">${final.toFixed(2)}</td><td>$${val.toFixed(0)}</td><td style="color:var(--green);">+${roi}%</td></tr>`;
+});
+// Update stake preview
+const spDays=[30,60,90,180,365];
+spDays.forEach(d=>{
+const amt=parseFloat(document.getElementById('stakeAmt')?.value)||1000;
+const final=amt*Math.pow(1+0.002234,3*d);
+const el=document.getElementById('sp'+d);
+const elp=document.getElementById('sp'+d+'p');
+if(el){el.textContent=final.toFixed(2);elp.textContent='+'+(((final/amt-1)*100).toFixed(1))+'%';}
+});
+}
+
+function calcBond(){
+const invest=parseFloat(document.getElementById('bondCalcInvest').value)||0;
+const mkt=parseFloat(document.getElementById('bondCalcMkt').value)||1;
+const bond=parseFloat(document.getElementById('bondCalcBond').value)||1;
+const mktCoins=invest/mkt;const bondCoins=invest/bond;
+document.getElementById('bondCalcMktCoins').textContent=mktCoins.toFixed(2)+' LGNS';
+document.getElementById('bondCalcBondCoins').textContent=bondCoins.toFixed(2)+' LGNS';
+document.getElementById('bondCalcAdv').textContent=`债券多赚 ${(bondCoins-mktCoins).toFixed(2)} LGNS (+${(((bondCoins/mktCoins)-1)*100).toFixed(1)}%)`;
+}
+
+function calcBondRecv(){
+const amt=parseFloat(document.getElementById('bondAmt').value)||0;
+if(lgnsPrice>0){
+const recv=amt/lgnsPrice*1.15; // ~15% discount
+document.getElementById('bondRecv').value=recv.toFixed(4);
+}
+}
+
+// ===== STAKE =====
+function getStakeAddr(key){return C[key]||C.staking;}
+function getApproveTarget(key){return key==='main'?C.helper:getStakeAddr(key);}
+function onStakeTypeChange(){}
+function setStakeMax(){document.getElementById('stakeAmt').value=document.getElementById('stakeBal').textContent;document.getElementById('stakeRecv').value=document.getElementById('stakeBal').textContent;}
+function setStakePct(p){if(!lgnsBalRaw)return;const v=(parseFloat(ethers.utils.formatUnits(lgnsBalRaw,dec))*p).toFixed(4);document.getElementById('stakeAmt').value=v;document.getElementById('stakeRecv').value=v;}
+function setUnstakeMax(){document.getElementById('unstakeAmt').value=document.getElementById('unstakeBal').textContent;}
+function setUnstakePct(p){if(!slgnsBalRaw)return;document.getElementById('unstakeAmt').value=(parseFloat(ethers.utils.formatUnits(slgnsBalRaw,dec))*p).toFixed(4);}
+function onUnstakeTypeChange(){const v=document.getElementById('unstakeType').value;document.getElementById('mainUnstakeForm').classList.toggle('hidden',v!=='main');document.getElementById('longUnstakeForm').classList.toggle('hidden',v==='main');}
+function toast(id,msg,type){const el=document.getElementById(id);el.className='toast show '+type;el.innerHTML=msg;}
+
+async function doApprove(ctx){
+if(!signer)return openModal();
+try{
+let token,target,amt;
+if(ctx==='stake'){token=C.LGNS;target=getApproveTarget(document.getElementById('stakeType').value);amt=document.getElementById('stakeAmt').value;}
+else if(ctx==='unstake'){token=C.sLGNS;target=C.staking;amt=document.getElementById('unstakeAmt').value;}
+else if(ctx==='bond'){token=C.DAI;target=C.bond360;amt=document.getElementById('bondAmt').value;}
+if(!amt||parseFloat(amt)<=0){toast(ctx+'Toast','请输入数量','error');return;}
+const erc=new ethers.Contract(token,ERC20,signer);
+const d=ctx==='bond'?decDAI:dec;
+const aw=ethers.utils.parseUnits(amt,d);
+const cur=await erc.allowance(addr,target);
+if(cur.gte(aw)){toast(ctx+'Toast','授权充足','success');return;}
+toast(ctx+'Toast','<span class="spinner"></span> 等待钱包确认...','info');
+const tx=await erc.approve(target,ethers.constants.MaxUint256);
+toast(ctx+'Toast',`<span class="spinner"></span> 确认中... <a href="https://polygonscan.com/tx/${tx.hash}" target="_blank">查看</a>`,'info');
+await tx.wait();
+toast(ctx+'Toast','授权成功','success');
+}catch(e){toast(ctx+'Toast','失败: '+(e.reason||e.message),'error');}
+}
+
+async function doStake(){
+if(!signer)return openModal();
+const amt=document.getElementById('stakeAmt').value;
+if(!amt||parseFloat(amt)<=0){toast('stakeToast','请输入数量','error');return;}
+try{
+const aw=ethers.utils.parseUnits(amt,dec);
+const type=document.getElementById('stakeType').value;
+toast('stakeToast','<span class="spinner"></span> 等待确认...','info');
+let tx;
+if(type==='main'){
+try{const h=new ethers.Contract(C.helper,HELPER_ABI,signer);try{tx=await h['stake(uint256,address)'](aw,addr);}catch(_){tx=await h['stake(uint256)'](aw);}}
+catch(_){const s=new ethers.Contract(C.staking,STAKING_ABI,signer);tx=await s.stake(aw,addr);}
+}else{
+const c=new ethers.Contract(getStakeAddr(type),LONG_ABI,signer);
+for(const fn of [()=>c['stake(uint256)'](aw),()=>c['deposit(uint256)'](aw)]){try{tx=await fn();break;}catch(_){}}
+if(!tx)throw new Error('未找到质押方法');
+}
+toast('stakeToast',`<span class="spinner"></span> <a href="https://polygonscan.com/tx/${tx.hash}" target="_blank">查看交易</a>`,'info');
+await tx.wait();toast('stakeToast','质押成功!','success');await refreshAll();
+}catch(e){toast('stakeToast','失败: '+(e.reason||e.message),'error');}
+}
+
+async function doUnstake(){
+if(!signer)return openModal();
+const amt=document.getElementById('unstakeAmt').value;
+if(!amt||parseFloat(amt)<=0){toast('unstakeToast','请输入数量','error');return;}
+try{
+const aw=ethers.utils.parseUnits(amt,dec);
+toast('unstakeToast','<span class="spinner"></span> 等待确认...','info');
+const s=new ethers.Contract(C.staking,STAKING_ABI,signer);
+const tx=await s.unstake(aw,true);
+toast('unstakeToast',`<span class="spinner"></span> <a href="https://polygonscan.com/tx/${tx.hash}" target="_blank">查看</a>`,'info');
+await tx.wait();toast('unstakeToast','赎回成功!','success');await refreshAll();
+}catch(e){toast('unstakeToast','失败: '+(e.reason||e.message),'error');}
+}
+
+async function doLongUnstake(){
+if(!signer)return openModal();
+const type=document.getElementById('unstakeType').value;
+try{
+toast('unstakeToast','<span class="spinner"></span> 等待确认...','info');
+const c=new ethers.Contract(getStakeAddr(type),LONG_ABI,signer);
+let tx;
+for(const fn of ['unstake','claim','withdraw','exit']){try{tx=await c[fn]();break;}catch(_){}}
+if(!tx)throw new Error('未找到解锁方法');
+toast('unstakeToast',`<span class="spinner"></span> <a href="https://polygonscan.com/tx/${tx.hash}" target="_blank">查看</a>`,'info');
+await tx.wait();toast('unstakeToast','解锁成功!','success');await refreshAll();
+}catch(e){toast('unstakeToast','失败: '+(e.reason||e.message),'error');}
+}
+
+// ===== BOND =====
+function setBondMax(){if(daiBalRaw)document.getElementById('bondAmt').value=parseFloat(ethers.utils.formatEther(daiBalRaw)).toFixed(2);calcBondRecv();}
+async function doBond(){
+if(!signer)return openModal();
+const amt=document.getElementById('bondAmt').value;
+if(!amt||parseFloat(amt)<=0){toast('bondToast','请输入数量','error');return;}
+try{
+toast('bondToast','<span class="spinner"></span> 等待确认...','info');
+const bond=new ethers.Contract(C.bond360,BOND_ABI,signer);
+const aw=ethers.utils.parseUnits(amt,decDAI);
+const maxPrice=ethers.utils.parseUnits('1000000',0);
+const tx=await bond.deposit(aw,maxPrice,addr);
+toast('bondToast',`<span class="spinner"></span> <a href="https://polygonscan.com/tx/${tx.hash}" target="_blank">查看</a>`,'info');
+await tx.wait();toast('bondToast','债券购买成功!','success');await refreshAll();
+}catch(e){toast('bondToast','失败: '+(e.reason||e.message),'error');}
+}
+
+// ===== DEX =====
+function onSwapDirChange(){
+const dir=document.getElementById('swapDir').value;
+if(dir==='buy'){
+document.getElementById('swapFromToken').innerHTML='<div class="dot" style="background:#2775CA;">D</div>DAI';
+document.getElementById('swapToToken').innerHTML='<div class="dot" style="background:var(--gold);">L</div>LGNS';
+document.getElementById('swapApproveBtn').textContent='授权 DAI';
+document.getElementById('swapFeeInfo').textContent='买入无手续费';
+}else{
+document.getElementById('swapFromToken').innerHTML='<div class="dot" style="background:var(--gold);">L</div>LGNS';
+document.getElementById('swapToToken').innerHTML='<div class="dot" style="background:#2775CA;">D</div>DAI';
+document.getElementById('swapApproveBtn').textContent='授权 LGNS';
+document.getElementById('swapFeeInfo').textContent='5% 卖出手续费';
+}
+updateSwapBals();
+document.getElementById('swapFromAmt').value='';document.getElementById('swapToAmt').value='';
+}
+function updateSwapBals(){
+const dir=document.getElementById('swapDir').value;
+if(dir==='buy') document.getElementById('swapFromBal').textContent=daiBalRaw?parseFloat(ethers.utils.formatEther(daiBalRaw)).toFixed(2):'0.00';
+else document.getElementById('swapFromBal').textContent=lgnsBalRaw?parseFloat(ethers.utils.formatUnits(lgnsBalRaw,dec)).toFixed(4):'0.0000';
+}
+function setSwapMax(){
+const dir=document.getElementById('swapDir').value;
+if(dir==='buy'&&daiBalRaw) document.getElementById('swapFromAmt').value=parseFloat(ethers.utils.formatEther(daiBalRaw)).toFixed(2);
+else if(lgnsBalRaw) document.getElementById('swapFromAmt').value=parseFloat(ethers.utils.formatUnits(lgnsBalRaw,dec)).toFixed(4);
+calcSwap();
+}
+function calcSwap(){
+const amt=parseFloat(document.getElementById('swapFromAmt').value)||0;
+const dir=document.getElementById('swapDir').value;
+if(lgnsPrice>0){
+if(dir==='buy') document.getElementById('swapToAmt').value=(amt/lgnsPrice).toFixed(4);
+else document.getElementById('swapToAmt').value=(amt*lgnsPrice*0.95).toFixed(4);
+}
+}
+async function doSwapApprove(){
+if(!signer)return openModal();
+const dir=document.getElementById('swapDir').value;
+const token=dir==='buy'?C.DAI:C.LGNS;
+const d=dir==='buy'?decDAI:dec;
+try{
+const erc=new ethers.Contract(token,ERC20,signer);
+toast('swapToast','<span class="spinner"></span> 授权中...','info');
+const tx=await erc.approve(C.router,ethers.constants.MaxUint256);await tx.wait();
+toast('swapToast','授权成功','success');
+}catch(e){toast('swapToast','失败: '+(e.reason||e.message),'error');}
+}
+async function doSwap(){
+if(!signer)return openModal();
+const dir=document.getElementById('swapDir').value;
+const amt=document.getElementById('swapFromAmt').value;
+if(!amt||parseFloat(amt)<=0){toast('swapToast','请输入数量','error');return;}
+try{
+const router=new ethers.Contract(C.router,ROUTER_ABI,signer);
+const d=dir==='buy'?decDAI:dec;
+const aw=ethers.utils.parseUnits(amt,d);
+const path=dir==='buy'?[C.DAI,C.LGNS]:[C.LGNS,C.DAI];
+const deadline=Math.floor(Date.now()/1000)+600;
+toast('swapToast','<span class="spinner"></span> 等待确认...','info');
+const tx=await router.swapExactTokensForTokensSupportingFeeOnTransferTokens(aw,0,path,addr,deadline);
+toast('swapToast',`<span class="spinner"></span> <a href="https://polygonscan.com/tx/${tx.hash}" target="_blank">查看</a>`,'info');
+await tx.wait();toast('swapToast','交易成功!','success');await refreshAll();
+}catch(e){toast('swapToast','失败: '+(e.reason||e.message),'error');}
+}
+
+// ===== MONITOR =====
+function quickMonitor(a){document.getElementById('monitorAddr').value=a;go('monitor');monitorWallet();}
+async function monitorWallet(){
+const a=document.getElementById('monitorAddr').value.trim();
+if(!a||!a.startsWith('0x')){toast('monitorToast','请输入有效的地址','error');return;}
+try{
+const p=rpcProvider;
+const lgns=new ethers.Contract(C.LGNS,ERC20,p);
+const slgns=new ethers.Contract(C.sLGNS,ERC20,p);
+const dai=new ethers.Contract(C.DAI,ERC20,p);
+const [lb,sb,db,mb]=await Promise.all([lgns.balanceOf(a),slgns.balanceOf(a),dai.balanceOf(a),p.getBalance(a)]);
+document.getElementById('monLGNS').textContent=parseFloat(ethers.utils.formatUnits(lb,dec)).toFixed(4);
+document.getElementById('monSLGNS').textContent=parseFloat(ethers.utils.formatUnits(sb,dec)).toFixed(4);
+document.getElementById('monDAI').textContent=parseFloat(ethers.utils.formatEther(db)).toFixed(4);
+document.getElementById('monMATIC').textContent=parseFloat(ethers.utils.formatEther(mb)).toFixed(4);
+document.getElementById('monLink').href='https://polygonscan.com/address/'+a;
+document.getElementById('monitorResult').classList.remove('hidden');
+toast('monitorToast','查询成功','success');
+}catch(e){toast('monitorToast','查询失败: '+e.message,'error');}
+}
+
+// ===== INIT =====
+// fetchPrice is called after initRPC() resolves (see above)
+calcYield();calcBond();
+setInterval(()=>{if(rpcProvider)fetchPrice();},30000);
+</script>
+</body>
+</html>
