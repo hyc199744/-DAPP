@@ -243,6 +243,10 @@ a:hover{text-decoration:underline;}
 <div class="wo-icon" style="background:#000;border:1px solid #333;color:#fff;font-weight:800;font-size:12px;">OKX</div>
 <div><div class="wo-name">OKX Wallet</div><div class="wo-desc">欧易 Web3 钱包</div></div>
 </button>
+<button class="wallet-opt" onclick="autoConnect()" style="border-color:var(--green);">
+<div class="wo-icon" style="background:var(--green-dim);color:var(--green);font-size:18px;">⚡</div>
+<div><div class="wo-name">自动检测</div><div class="wo-desc">手机钱包浏览器推荐使用</div></div>
+</button>
 </div>
 </div>
 
@@ -713,21 +717,23 @@ const BOND_ABI=['function deposit(uint256,uint256,address) returns (uint256)','f
 let provider=null,signer=null,addr=null,dec=9,decDAI=18;
 let lgnsPrice=0,lgnsBalRaw=null,slgnsBalRaw=null,daiBalRaw=null;
 // Multiple RPC fallback for reliability
-const RPC_LIST=['https://rpc-mainnet.matic.quiknode.pro','https://polygon-bor-rpc.publicnode.com','https://polygon-rpc.com','https://rpc.ankr.com/polygon'];
+const RPC_LIST=['https://rpc-mainnet.matic.quiknode.pro','https://1rpc.io/matic','https://polygon.drpc.org','https://polygon-rpc.com'];
 let rpcProvider=null;
 async function initRPC(){
 for(const url of RPC_LIST){
 try{
 const p=new ethers.providers.JsonRpcProvider(url);
-await p.getBlockNumber();
+await Promise.race([p.getBlockNumber(),new Promise((_,r)=>setTimeout(()=>r('timeout'),4000))]);
 rpcProvider=p;
 console.log('[RPC] Connected:',url);
 return;
-}catch(e){console.warn('[RPC] Failed:',url);}
+}catch(e){console.warn('[RPC] Failed:',url,e);}
 }
+// All failed, use first as fallback anyway
 rpcProvider=new ethers.providers.JsonRpcProvider(RPC_LIST[0]);
+console.warn('[RPC] All failed, using fallback');
 }
-initRPC().then(()=>{fetchPrice();});
+initRPC().then(()=>{fetchPrice();}).catch(e=>console.error('[RPC] Init error:',e));
 
 // ===== NAV =====
 function toggleSidebar(){
@@ -747,20 +753,32 @@ document.getElementById('sidebarOverlay').classList.remove('show');
 // ===== WALLET =====
 function openModal(){document.getElementById('walletModal').classList.add('show');}
 function closeModal(){document.getElementById('walletModal').classList.remove('show');}
+async function autoConnect(){
+// Auto-detect: try okxwallet first, then ethereum
+if(window.okxwallet) return connectWallet('okx');
+if(window.ethereum) return connectWallet('metamask');
+closeModal();
+alert('未检测到钱包，请在 MetaMask 或 OKX 钱包的内置浏览器中打开本页面');
+}
 
 async function connectWallet(type){
 closeModal();
 try{
 let eth;
 if(type==='metamask'){
+// Desktop: multi-provider detection
 if(window.ethereum?.providers?.length) eth=window.ethereum.providers.find(p=>p.isMetaMask&&!p.isOKExWallet)||window.ethereum.providers.find(p=>p.isMetaMask);
 if(!eth&&window.ethereum?.isMetaMask) eth=window.ethereum;
-if(!eth) throw new Error('未检测到 MetaMask');
+// Mobile wallet browser: window.ethereum is the only provider
+if(!eth&&window.ethereum) eth=window.ethereum;
+if(!eth) throw new Error('未检测到 MetaMask，请在钱包内置浏览器中打开本页面');
 }else{
 eth=window.okxwallet;
 if(!eth&&window.ethereum?.providers?.length) eth=window.ethereum.providers.find(p=>p.isOKExWallet||p.isOkxWallet);
 if(!eth&&window.ethereum?.isOKExWallet) eth=window.ethereum;
-if(!eth) throw new Error('未检测到 OKX 钱包');
+// Mobile OKX wallet browser: window.ethereum is OKX
+if(!eth&&window.ethereum) eth=window.ethereum;
+if(!eth) throw new Error('未检测到 OKX 钱包，请在钱包内置浏览器中打开本页面');
 }
 const accs=await eth.request({method:'eth_requestAccounts'});
 addr=accs[0]; provider=new ethers.providers.Web3Provider(eth); signer=provider.getSigner();
