@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>LGNS 领取中心</title>
+<style>
+:root{--card:#141a2e;--line:#27304f;--green:#3ddc84;--red:#ff5d6c;--gold:#ffcc4d;--blue:#5b9bff;--txt:#e9edff;--mut:#8a93b8;}
+*{box-sizing:border-box;margin:0;padding:0}body{background:linear-gradient(160deg,#070b16,#0f1630);color:var(--txt);font-family:"Segoe UI","Microsoft YaHei",system-ui,sans-serif;padding:16px;max-width:640px;margin:0 auto;min-height:100vh}
+h1{font-size:20px}.sub{color:var(--mut);font-size:12px;margin:4px 0 14px}
+.btn{background:linear-gradient(135deg,#3b82f6,#6d5bff);color:#fff;border:0;border-radius:10px;padding:9px 16px;font-size:14px;font-weight:600;cursor:pointer}
+.btn:active{transform:scale(.98)}.btn.g{background:linear-gradient(135deg,#22c55e,#16a34a);width:100%;padding:13px;font-size:15px;margin:8px 0}
+.btn:disabled{opacity:.45;cursor:not-allowed}.btn.full{width:100%}
+.card{background:var(--card);border:1px solid var(--line);border-radius:13px;padding:14px 16px;margin:10px 0}
+.mrow{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 0;border-bottom:1px solid var(--line)}
+.mrow:last-child{border:0}.mname{font-size:14px;font-weight:600}.mdesc{font-size:11px;color:var(--mut);margin-top:2px}
+.badge{font-size:12px;padding:3px 9px;border-radius:11px;background:#1c2540;color:var(--mut)}
+.badge.y{background:#14331f;color:var(--green)}.badge.n{background:#2a1a1f;color:var(--mut)}
+.addr{background:#16223d;padding:6px 12px;border-radius:20px;font-size:12px;font-family:monospace}
+.mut{color:var(--mut)}.win{color:var(--green)}
+#log{background:#0c1124;border:1px solid var(--line);border-radius:10px;padding:11px;height:200px;overflow-y:auto;font-family:ui-monospace,Consolas,monospace;font-size:12px;line-height:1.6;margin-top:12px}
+#log div{padding:2px 0;border-bottom:1px solid #161d33;white-space:pre-wrap;word-break:break-all}
+</style></head><body>
+<a href="index.html" style="color:#5b9bff;font-size:13px;text-decoration:none;display:inline-block;margin-bottom:8px">← 返回 ORIGIN 首页</a><h1>🟢 LGNS 领取中心</h1>
+<div class="sub">连钱包,每类质押/奖励单独领取。每笔需在钱包签名,钱包需有 gas。</div>
+<button class="btn full" id="connectBtn" onclick="connect()" style="padding:13px">🦊 连接钱包</button>
+<div id="wallet" style="display:none">
+  <div class="card">
+    <div class="mrow"><span class="mut">钱包</span><span class="addr" id="addr">—</span></div>
+    <div class="mrow"><span class="mut">网络</span><span id="net">—</span></div>
+    <div class="mrow"><span class="mut">LGNS 余额</span><span class="win" id="lgnsBal">—</span></div>
+  </div>
+  <button class="btn g" id="allBtn" onclick="claimAll()">⚡ 一键全领(下面全部)</button>
+  <button class="btn full" onclick="scanAll()" style="background:#1c2540;margin-bottom:4px">🔄 刷新可领状态</button>
+  <div class="card" id="modules"></div>
+  <div id="log"></div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/ethers@6.13.4/dist/ethers.umd.min.js"></script>
+<script>
+const PRIN="0xd9f0f7f5",EXTRA="0x3829cab1",INT="0xd286f3cf",CNT="0x98dc8dea",GETCLAIM="0x0835fe47",REDEEM="0x5638f1f3",CLAIM0="0x4e71d92d";
+// 每条链的领取模块: type=stake(质押) / turbine(涡轮) / reward(claim无参奖励)
+const MODS={
+ 137:[
+  {n:"600天质押",d:"本金+爆塊+額外·全仓位",type:"stake",a:"0x8cA97F41d2C81AF050656e8AD0Cf543820a24504"},
+  {n:"360天质押·蛛网能量",d:"QUOTA360 全仓位",type:"stake",a:"0x25a4b842cB200E9148FF5a11BAbF80488c8d8b07"},
+  {n:"360天质押·长期V2",d:"LONG360V2 全仓位",type:"stake",a:"0x6652d0f0D7aEc5070804E55b7023d32B9Bbc4190"},
+  {n:"涡轮",d:"已到期 redeem",type:"turbine",a:"0x07Ff4e06865de4934409Aa6eCea503b08Cc1C78d"},
+  {n:"活期奖励",d:"A奖励 claim",type:"reward",a:"0x7DC3d391dD1303894eB359b483C8894A0C1Cf681"},
+  {n:"蛛网奖励",d:"社区奖励 claim",type:"reward",a:"0xa49aba84930299c6c2d537456A3e681bB4500f15"},
+  {n:"DAO奖励",d:"DAO池 claim",type:"reward",a:"0x0309Ca717d6989676194b88fD06029a88CEEfee6"},
+  {n:"Mint奖励",d:"铸造奖励 claim",type:"reward",a:"0x806FDAb92B0Fc7fBE4bbBE5117A54cAa9283d5a4"},
+ ],
+ 6714:[
+  {n:"积分质押",d:"本金+奖励·全仓位",type:"stake",a:"0x1E5FeeC473F7F445FC7F5FeEC0beABB2270b0b4E"},
+  {n:"600天质押",d:"本金+奖励·全仓位",type:"stake",a:"0x04eD22c6d1D020A9B5e032E93D79ab28293EF72f"},
+  {n:"涡轮",d:"已到期 redeem",type:"turbine",a:"0x92B53785090F6FE0717Ca3cF5dB8f8040d3B070b"},
+  {n:"蛛网奖励",d:"蛛网分发 claim",type:"reward",a:"0xF7a0cacDF0810609EE5618247C4121b799E41664"},
+ ],
+};
+const LGNS={137:"0xeB51D9A39AD5EEF215dC0Bf39a8821ff804A0F01",6714:"0x4D1D808a081FdAc440703b3765FC61f8028C06B8"};
+let provider,signer,me,chainId,mods,lgns;
+const $=id=>document.getElementById(id);
+function log(m,c){const d=document.createElement("div");if(c)d.style.color=c==="win"?"#3ddc84":c==="bad"?"#ff5d6c":"#ffcc4d";d.textContent=new Date().toLocaleTimeString()+" "+m;$("log").prepend(d);}
+const pad=a=>a.toLowerCase().replace("0x","").padStart(64,"0");
+const e1=(s,i)=>s+BigInt(i).toString(16).padStart(64,"0");
+const e2=(s,i,a)=>s+BigInt(i).toString(16).padStart(64,"0")+BigInt(a).toString(16).padStart(64,"0");
+async function rawCall(to,data){try{return await provider.call({to,data});}catch(e){return null;}}
+async function ok(to,data){try{await provider.call({to,data,from:me});return true;}catch(e){return false;}}
+async function maxC(to,sel,i){let hi=3000n*10n**9n,lo=0n;if(await ok(to,e2(sel,i,hi)))return hi;for(let k=0;k<13;k++){const m=(lo+hi)/2n;if(await ok(to,e2(sel,i,m)))lo=m;else hi=m;}return lo;}
+async function connect(){
+ if(!window.ethereum){alert("请用 MetaMask 或钱包内置浏览器打开");return;}
+ provider=new ethers.BrowserProvider(window.ethereum);await provider.send("eth_requestAccounts",[]);
+ signer=await provider.getSigner();me=await signer.getAddress();
+ chainId=Number((await provider.getNetwork()).chainId);mods=MODS[chainId];lgns=LGNS[chainId];
+ $("wallet").style.display="block";$("connectBtn").style.display="none";
+ $("addr").textContent=me.slice(0,6)+"…"+me.slice(-4);
+ $("net").textContent=mods?(chainId===137?"Polygon":"Anubis"):("链"+chainId+" 不支持");
+ window.ethereum.on&&window.ethereum.on("accountsChanged",()=>location.reload());
+ window.ethereum.on&&window.ethereum.on("chainChanged",()=>location.reload());
+ if(!mods){log("此网络不支持,请切 Polygon/Anubis","bad");return;}
+ render();scanAll();
+}
+function render(){
+ $("modules").innerHTML=mods.map((m,i)=>`<div class="mrow"><div><div class="mname">${m.n}</div><div class="mdesc">${m.d}</div></div><div style="display:flex;align-items:center;gap:8px"><span class="badge" id="b${i}">检测中…</span><button class="btn" onclick="claimMod(${i})">领取</button></div></div>`).join("");
+}
+async function bal(t,w){const r=await rawCall(t,"0x70a08231"+pad(w));return r?BigInt(r):0n;}
+async function scanAll(){
+ $("lgnsBal").textContent=(Number(await bal(lgns,me))/1e9).toFixed(4)+" LGNS";
+ for(let i=0;i<mods.length;i++)checkMod(i);
+}
+async function checkMod(i){
+ const m=mods[i],el=$("b"+i);el.textContent="检测中…";el.className="badge";
+ let avail=false,info="";
+ try{
+  if(m.type==="reward"){avail=await ok(m.a,CLAIM0);info=avail?"可领":"无";}
+  else if(m.type==="turbine"){const ci=await rawCall(m.a,GETCLAIM+pad(me));if(ci){const len=parseInt(ci.slice(66,130),16);let c=0;for(let id=0;id<len;id++)if(await ok(m.a,REDEEM+pad(me)+BigInt(id).toString(16).padStart(64,"0")))c++;avail=c>0;info=c>0?(c+"笔可领"):"无";}else info="无";}
+  else{const cc=await rawCall(m.a,CNT+pad(me));const n=cc?Number(BigInt(cc)):0;if(!n){info="无仓位";}else{let tot=0;for(let k=0;k<n;k++){tot+=Number(await maxC(m.a,EXTRA,k))/1e9+Number(await maxC(m.a,INT,k))/1e9;}avail=true;info=n+"仓 可领奖~"+tot.toFixed(2);}}
+ }catch(e){info="读取失败";}
+ el.textContent=info;el.className="badge "+(avail?"y":"n");
+}
+async function send(to,data,desc){log("发送: "+desc);try{const tx=await signer.sendTransaction({to,data});log("提交 "+tx.hash.slice(0,14)+" …");await tx.wait();log("✅ "+desc+" 成功","win");return true;}catch(e){log("✕ "+desc+" "+(e.shortMessage||"失败/取消"),"bad");return false;}}
+async function claimMod(i){
+ const m=mods[i];log("=== 领取: "+m.n+" ===","win");
+ try{
+  if(m.type==="reward"){if(await ok(m.a,CLAIM0))await send(m.a,CLAIM0,m.n);else log(m.n+" 无可领");}
+  else if(m.type==="turbine"){const ci=await rawCall(m.a,GETCLAIM+pad(me));if(ci){const len=parseInt(ci.slice(66,130),16);for(let id=len-1;id>=0;id--){const d=REDEEM+pad(me)+BigInt(id).toString(16).padStart(64,"0");if(await ok(m.a,d))await send(m.a,d,m.n+" #"+id);}}}
+  else{const cc=await rawCall(m.a,CNT+pad(me));const n=cc?Number(BigInt(cc)):0;for(let k=0;k<n;k++){await send(m.a,e1(PRIN,k),m.n+" 本金#"+k);const ex=await maxC(m.a,EXTRA,k);if(ex>1000000n)await send(m.a,e2(EXTRA,k,ex),m.n+" 額外#"+k);const it=await maxC(m.a,INT,k);if(it>1000000n)await send(m.a,e2(INT,k,it),m.n+" 爆塊#"+k);}}
+ }catch(e){log(m.n+" 出错 "+(e.shortMessage||""),"bad");}
+ checkMod(i);
+}
+async function claimAll(){$("allBtn").disabled=true;log("===== 一键全领开始 =====","win");for(let i=0;i<mods.length;i++)await claimMod(i);log("===== 全部完成 =====","win");$("allBtn").disabled=false;$("lgnsBal").textContent=(Number(await bal(lgns,me))/1e9).toFixed(4)+" LGNS";}
+</script></body></html>
